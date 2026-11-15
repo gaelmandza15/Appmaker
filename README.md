@@ -18,13 +18,15 @@ DeepSeek produit un **plan de données JSON**. AppMaker valide ce plan, choisit 
 | --- | --- | --- |
 | ![Tableau de bord généré](docs/app-dashboard.png) | ![Plein aperçu](docs/studio-focus.png) | ![Application sur mobile](docs/app-mobile.png) |
 
+![Écran interactif ajouté par l'agent, filtré par catégorie dans l'application Windows](docs/app-interactive.png)
+
 ![Application Windows installée, avec sa base SQLite locale](docs/desktop-app.png)
 
 ---
 
 ## Démarrage
 
-Prérequis : **Node.js 20+** (Node 22+ recommandé). Aucune dépendance à installer.
+Prérequis : **Node.js 20+** (Node 22+ recommandé). Une seule dépendance : `playwright-core` (vérification navigateur de l’agent), installée par `npm install`. Le reste du studio n’utilise aucune librairie externe.
 
 1. La clé DeepSeek est lue depuis le fichier `.env` à la racine :
 
@@ -175,30 +177,72 @@ Le registre est généré dans `assets/extensions.generated.js` : chaque module 
 
 ### L’agent
 
-Le studio confie la demande à un agent qui travaille **par deltas**, avec des outils bornés :
+L’agent n’est pas un générateur de fichiers : c’est un développeur qui travaille dans un bac à sable vivant, **exécute et prouve** ce qu’il fait.
 
 1. il reçoit le modèle de données, les écrans, le contrat d’extension et la source des extensions existantes ;
-2. il écrit un module sous `extensions/` avec `write_file` ;
-3. le projet est **synchronisé immédiatement** (socle régénéré, extension incluse, build invalidé) ;
-4. `check_app` vérifie la syntaxe JS, charge réellement chaque module d’extension, détecte les API invalides (`store.create`…) et teste les ressources HTTP de l’aperçu ;
-5. l’agent corrige jusqu’à obtenir `ok=true`, puis termine par un résumé ; `build_windows` peut produire l’installateur dans la foulée.
+2. il écrit du vrai code sous `extensions/` (`write_file`) ou ajoute une donnée (`add_field`) ;
+3. le projet est **synchronisé immédiatement** (socle régénéré, extensions et migrations préservées, build invalidé) ;
+4. `check_app` vérifie la syntaxe, charge réellement chaque module et teste les ressources HTTP ;
+5. `verify_ui` **pilote l’aperçu réel dans un navigateur headless** : navigation, clics, saisie, rechargement, lecture du DOM et des erreurs console ;
+6. il corrige et recommence (jusqu’à 30 étapes) jusqu’à ce que le comportement soit **observé**, puis résume ce qu’il a vérifié ; `build_windows` produit l’installateur si demandé.
 
 Dans le studio, le panneau « Agent AppMaker » affiche le résumé et les fichiers modifiés. Côté API :
 
 ```text
-POST /api/apps/:id/agent   { "instruction": "Ajoute un export CSV sur les produits" }
+POST /api/apps/:id/agent   { "instruction": "Rends l'écran Alertes filtrable par catégorie" }
 → { run: { summary, changedFiles }, transcript, app, spec, files }
 ```
 
+#### Vérification navigateur
+
+`verify_ui` s’appuie sur `playwright-core` et un **Edge ou Chrome déjà installé** (aucun téléchargement de navigateur). Sans ces éléments, le studio fonctionne et l’outil se déclare simplement indisponible (`GET /api/browser`).
+
+| Action | Effet |
+| --- | --- |
+| `inspect` | état de la page : titres, navigation, boutons, champs, lignes, texte, erreurs console |
+| `goto` | navigation par route (`#/alertes-stock`) |
+| `click` | clic par libellé visible ou `aria-label` |
+| `fill` | remplissage d’un champ (`name`, `id` ou libellé) |
+| `reload` | rechargement complet de l’aperçu |
+| `screenshot` | capture plein page dans `data/agent-shots/` |
+
+#### Écrans interactifs
+
+Un écran d’extension n’est plus une simple chaîne HTML : c’est un composant avec état et événements.
+
+```js
+let categorie = '';
+
+export default {
+  id: 'catalogue', name: 'Catalogue',
+  hooks: { screens: [{
+    id: 'catalogue', title: 'Catalogue', icon: 'list', entity: 'produit',
+    render(ctx) {
+      const lignes = ctx.rowsFor('produit').filter((r) => !categorie || r.categorie === categorie);
+      return '<div class="page">…' + lignes.map(…) + '</div>';
+    },
+    on(name, el, ctx) {          // déclenché par data-ext-event="filtre"
+      if (name === 'filtre') categorie = el.dataset.valeur;
+      ctx.refresh();             // ne redessine que la zone de contenu
+    },
+    mount(root, ctx) { /* écouteurs fins si nécessaire */ }
+  }] }
+};
+```
+
+L’état vit dans une variable de module : un `ctx.refresh()` redessine uniquement le contenu et conserve l’état, sans recharger l’application.
+
 Garde-fous :
 
-- l’agent **n’écrit que sous `extensions/`** ; socle, blocs, `src-tauri/` et migrations sont en lecture seule ;
-- les modules sont validés (export par défaut, `id`, hooks connus, `run`/`render` présents) avant d’être acceptés ;
-- aucune dépendance externe ni URL distante ;
+- l’agent **ne modifie le code que sous `extensions/`** ; socle, blocs et `src-tauri/` sont en lecture seule, le schéma passe par `add_field` ;
+- les modules sont validés (export par défaut, `id`, hooks connus, `run`/`render`/`mount`/`on` typés) avant d’être acceptés ;
+- aucune dépendance externe, aucun `fetch`, aucune URL distante ;
+- le bac à sable est le projet, pas la machine : les outils sont bornés au dossier de l’application ;
 - le build est invalidé après chaque changement, donc l’installateur proposé correspond toujours à l’état affiché.
 
-Limite actuelle : l’agent ajoute des champs (jamais de suppression ni de renommage), des actions, des widgets et des écrans. Les nouvelles entités, les relations ajoutées après coup et les imports CSV restent à construire.
+Limite actuelle : l’agent ajoute des champs (jamais de suppression ni de renommage), des actions, des widgets et des écrans interactifs. Les nouvelles entités et les imports CSV restent à construire.
 
+---
 ---
 
 ## Architecture
@@ -382,7 +426,8 @@ Les réponses d’erreur sont au format `{ error: { message, code } }`.
 - L’installateur n’est pas signé : SmartScreen avertit au premier lancement. Pas encore de mise à jour automatique.
 - L’icône affichée dans l’Explorateur pour l’exe est celle de l’hôte ; le raccourci et l’installateur portent, eux, l’icône de l’application.
 - Toutes les applications partagent le dossier de données `%APPDATA%\com.appmaker.host` (une base distincte par application).
-- Le smoke test ne couvre pas l’interface navigateur, les appels DeepSeek, ni la compilation Tauri réelle.
+- La vérification navigateur exige `playwright-core` et un Edge ou Chrome installé ; elle n’est pas couverte par le smoke test.
+- Le smoke test ne couvre ni les appels DeepSeek, ni la compilation Tauri réelle.
 
 ---
 

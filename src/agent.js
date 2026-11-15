@@ -13,7 +13,7 @@ import { config } from './config.js';
  * l’empaquetage Windows. Chaque outil est borné et journalisé.
  */
 
-const MAX_STEPS = 16;
+const MAX_STEPS = 30;
 const MAX_FILE_BYTES = 60 * 1024;
 const EXTENSION_PATH = /^extensions\/[a-z0-9][a-z0-9-]*\/[A-Za-z0-9._-]+\.(js|json|css)$/;
 
@@ -95,6 +95,25 @@ const TOOLS = [
       name: 'check_app',
       description: 'Vérifie le projet : syntaxe JS, chargement des extensions, accès HTTP aux ressources de l’aperçu.',
       parameters: { type: 'object', properties: {}, additionalProperties: false }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'verify_ui',
+      description: 'Ouvre l’aperçu dans un vrai navigateur et exécute une action : inspecter, naviguer, cliquer, remplir un champ, recharger, capturer. Retourne la page (titres, navigation, boutons, champs, lignes, texte) et les erreurs console. Utilisez-le pour PROUVER qu’une fonctionnalité fonctionne.',
+      parameters: {
+        type: 'object',
+        properties: {
+          action: { type: 'string', enum: ['inspect', 'goto', 'click', 'fill', 'reload', 'screenshot'] },
+          hash: { type: 'string', description: 'Pour goto : route, ex. #/alertes-stock' },
+          text: { type: 'string', description: 'Pour click : libellé visible ou aria-label du bouton/lien' },
+          field: { type: 'string', description: 'Pour fill : nom, id ou libellé du champ' },
+          value: { type: 'string', description: 'Pour fill : valeur à saisir' }
+        },
+        required: ['action'],
+        additionalProperties: false
+      }
     }
   },
   {
@@ -211,8 +230,16 @@ ctx.ui.formatNumber, ctx.ui.formatMoney, ctx.ui.formatDate, ctx.ui.escapeHtml. f
 CONTEXTE FOURNI À render(ctx) des widgets : ctx.app, ctx.screen, ctx.rows (lignes de l'écran, ou []), ctx.rowsFor(entityKey), ctx.formatNumber, ctx.formatMoney, ctx.formatPercent (pourcentage : 42.5 → « 42,5 % »).
 Retourne { value, label, hint, icon, tone } avec tone parmi accent, mint, amber, violet, neutral.
 
-CONTEXTE FOURNI À render(ctx) des écrans : ctx.app, ctx.screen, ctx.rows (lignes de l'entité déclarée, ou []), ctx.rowsFor(entityKey), ctx.store, ctx.reload(), ctx.icon(nom, taille), ctx.escapeHtml, ctx.formatNumber, ctx.formatMoney, ctx.formatPercent, ctx.formatDate, ctx.formatRelative, ctx.ui.toast.
-Un écran retourne une chaîne HTML. Utilise les classes existantes : page, page-head, page-title, page-sub, panel, panel-head, table-card, table-scroll, kpi-grid, kpi-card, badge, empty-state. Échappe toute donnée utilisateur avec ctx.escapeHtml.
+ÉCRANS INTERACTIFS (important : tu peux écrire du vrai code)
+Un écran est un objet { id, title, icon, entity?, render(ctx), mount(root, ctx)?, on(eventName, element, ctx, event)? }.
+- render(ctx) retourne une chaîne HTML. Classes disponibles : page, page-head, page-title, page-sub, page-actions, panel, panel-head, table-card, table-scroll, kpi-grid, kpi-card, badge, chip, btn btn-primary, btn btn-ghost, input, select, empty-state, grid-2.
+- Les boutons et champs interactifs portent data-ext-event="nom-événement". Au clic / submit / change, le runtime appelle on(nom, élément, ctx, événement) puis ctx.refresh() pour redessiner.
+- L'état vit dans une variable de module (let filtre = '';). on() la met à jour, puis ctx.refresh().
+- mount(root, ctx) est appelé à chaque rendu : utilise-le pour des écouteurs fins (input, keydown) ou pour initialiser des composants.
+- Ne jamais intercepter data-action (réservé au socle). Ne pas attacher d'écouteur global sans condition.
+
+CONTEXTE FOURNI À render/mount/on : ctx.app, ctx.screen, ctx.rows (lignes de l'entité), ctx.rowsFor(entityKey), ctx.store (insert/update/remove), ctx.reload(), ctx.refresh(), ctx.icon(nom, taille), ctx.escapeHtml, ctx.formatNumber, ctx.formatMoney, ctx.formatPercent, ctx.formatDate, ctx.formatRelative, ctx.toast(message, type), ctx.confirm(message).
+Échappe toujours les données utilisateur avec ctx.escapeHtml. Pas de dépendance externe, pas de fetch.
 
 SCHÉMA DE DONNÉES
 Pour ajouter un champ, utilise add_field (migration additive ALTER TABLE). N'édite jamais src-tauri/migrations ni data/spec.json à la main. Les lignes existantes auront NULL pour le nouveau champ ; ne l'exige pas dans les actions.
@@ -220,6 +247,29 @@ Pour créer un écran qui liste des données existantes, utilise le hook screens
 
 EXTENSIONS EXISTANTES (source complète, ne les relis pas) :
 ${existing}
+
+EXEMPLE D'ÉCRAN INTERACTIF (filtre par catégorie, à adapter) :
+let filtre = '';
+export default {
+  id: 'catalogue', name: 'Catalogue',
+  hooks: { screens: [{
+    id: 'catalogue', title: 'Catalogue', icon: 'list', entity: 'produit',
+    render(ctx) {
+      const lignes = ctx.rowsFor('produit').filter((r) => !filtre || r.categorie === filtre);
+      const boutons = ['Informatique', 'Mobilier'].map((c) => '<button class="btn btn-ghost" data-ext-event="filtre" data-valeur="' + c + '">' + c + '</button>').join('');
+      const rangs = lignes.map((r) => '<tr><td>' + ctx.escapeHtml(r.nom) + '</td><td>' + ctx.escapeHtml(r.categorie || '') + '</td></tr>').join('');
+      return '<div class="page"><div class="page-head"><div><div class="page-title"><h1>Catalogue</h1></div>'
+        + '<p class="page-sub">' + lignes.length + ' produit(s)</p></div></div>'
+        + '<div class="panel"><button class="btn btn-ghost" data-ext-event="reset">Tout afficher</button>' + boutons
+        + '<table class="table-card"><tbody>' + rangs + '</tbody></table></div></div>';
+    },
+    on(name, el, ctx) {
+      if (name === 'filtre') filtre = el.dataset.valeur;
+      if (name === 'reset') filtre = '';
+      ctx.refresh();
+    }
+  }] }
+};
 
 ICÔNES DISPONIBLES
 download, activity, chart, layers, package, boxes, users, truck, receipt, calendar, star, tag, cart, building, sparkles, alert, list, check, clock, home, briefcase, phone, mail, settings, database.
@@ -233,11 +283,13 @@ RÈGLES
 6. Termine par finish avec un résumé court en français. Tu peux appeler build_windows si l'utilisateur demande explicitement un installateur.
 7. Réponds toujours en français, sans blabla.
 
-MÉTHODE — n'explore pas le projet, tout est ci-dessus :
-1. N'ouvre jamais assets/, src-tauri/, README.md, data/spec.json : c'est le socle généré. Tu n'as pas besoin de le lire.
-2. Pour un nouveau champ : add_field. Pour une action, un widget ou un écran : write_file (un fichier extensions/<id>/index.js suffit).
-3. Appelle check_app. En cas d'erreur, corrige avec write_file (ou un nouvel add_field) et revérifie.
-4. Termine par finish. Si l'utilisateur demande un installateur, appelle build_windows avant finish.
+MÉTHODE — tu es un développeur, prouve ce que tu fais :
+1. Le socle (assets/, src-tauri/) est en lecture seule : n'y touche pas et ne le lis pas, tout le contexte utile est ci-dessus.
+2. Implémente : add_field pour une donnée, write_file pour une action, un widget ou un écran. Tu peux écrire du vrai code : état local, événements, calculs, DOM construit en JS.
+3. check_app : syntaxe + chargement des modules. OBLIGATOIRE après chaque écriture.
+4. verify_ui : ouvre l'aperçu réel dans un navigateur. Inspecte, navigue, clique, remplis, recharges. Vérifie que le résultat attendu apparaît ET qu'aucune erreur console n'apparaît. Une fonctionnalité n'est pas terminée tant que verify_ui ne le prouve pas.
+5. Corrige et répète jusqu'à ce que la preuve soit là. Ne prétends jamais qu'un écran ou une action marche sans l'avoir observé.
+6. finish en résumant ce qui a été vérifié, pas seulement écrit. build_windows uniquement si l'utilisateur demande un installateur.
 Ne lis un fichier existant que si tu dois modifier cette extension précise.`;
 }
 
@@ -308,6 +360,8 @@ async function importExtensionModule(file) {
       if (hook === 'screens') {
         if (!item.id || !item.title) throw new Error('écran sans id ou title');
         if (typeof item.render !== 'function') throw new Error(`écran « ${item.id} » sans render()`);
+        if (item.mount && typeof item.mount !== 'function') throw new Error(`écran « ${item.id} » : mount doit être une fonction`);
+        if (item.on && typeof item.on !== 'function') throw new Error(`écran « ${item.id} » : on doit être une fonction`);
       }
     }
   }
@@ -358,6 +412,11 @@ async function executeTool(name, args, context) {
     const result = await addField(args);
     if (result?.ok) changedFiles.add(`src-tauri/migrations/${result.migration}`);
     return result;
+  }
+
+  if (name === 'verify_ui') {
+    const { runUiAction } = await import('./browser.js');
+    return runUiAction({ appId, baseUrl, action: args.action, selectors: { hash: args.hash, text: args.text, field: args.field, value: args.value } });
   }
 
   if (name === 'check_app') {

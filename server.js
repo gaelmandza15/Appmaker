@@ -9,6 +9,7 @@ import { createAppId, getDemoSpec } from './src/spec.js';
 import { buildPackaging, generateProject, sqliteAddColumn, writeProjectFiles } from './src/generator.js';
 import { detectToolchain, getArtifact, getBuildBundle, getBuildStatus, toBuildSnapshot, startBuild, stopAllBuilds, invalidateBuild } from './src/builder.js';
 import { runAgent } from './src/agent.js';
+import { browserStatus, closeBrowserSessions } from './src/browser.js';
 import { getLibrarySummary } from './src/library/catalog.js';
 import { createZip } from './src/zip.js';
 
@@ -654,6 +655,11 @@ async function handleApi(req, res, url) {
     return true;
   }
 
+  if (pathname === '/api/browser' && method === 'GET') {
+    sendJson(res, 200, await browserStatus());
+    return true;
+  }
+
   if (pathname === '/api/toolchain' && method === 'GET') {
     const toolchain = await detectToolchain({ refresh: url.searchParams.has('refresh') });
     sendJson(res, 200, toolchain);
@@ -819,6 +825,7 @@ server.listen(config.port, config.host, () => {
 for (const signal of ['SIGINT', 'SIGTERM']) {
   process.on(signal, () => {
     stopAllBuilds();
+  closeBrowserSessions();
     server.close(() => process.exit(0));
     setTimeout(() => process.exit(0), 3000).unref();
   });

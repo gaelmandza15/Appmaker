@@ -521,27 +521,83 @@ const RENDERERS = { {{RENDERER_MAP}} };
 
 function renderExtensionScreen(screen) {
   try {
-    const html = screen.render({
-      app: APP,
-      screen,
-      store,
-      reload: () => reload(),
-      rows: screen.entity ? rows(screen.entity) : [],
-      rowsFor: rows,
-      icon,
-      escapeHtml,
-      formatNumber,
-      formatMoney,
-      formatPercent,
-      formatDate,
-      formatRelative,
-      ui: { toast, confirm: confirmDialog }
-    });
-    if (typeof html === 'string' && html.trim()) return html;
-    return `<div class="page"><div class="panel"><div class="panel-empty">${icon('alert', 22)}<p>Cet écran ne renvoie aucun contenu.</p></div></div></div>`;
+    return screen.render(extensionScreenContext(screen));
   } catch (error) {
     console.error(`Écran d’extension « ${screen.id} » :`, error);
     return `<div class="page"><div class="panel"><div class="panel-empty">${icon('alert', 22)}<p>Cet écran a rencontré une erreur.</p></div></div></div>`;
+  }
+}
+
+/** Contexte partagé entre render(), mount() et on(). */
+function extensionScreenContext(screen) {
+  return {
+    app: APP,
+    screen,
+    root: view.querySelector('.content'),
+    store,
+    reload: () => reload(),
+    refresh: () => refreshExtensionScreen(screen),
+    rows: screen.entity ? rows(screen.entity) : [],
+    rowsFor: rows,
+    icon,
+    escapeHtml,
+    formatNumber,
+    formatMoney,
+    formatPercent,
+    formatDate,
+    formatRelative,
+    toast,
+    confirm: confirmDialog,
+    ui: { toast, confirm: confirmDialog }
+  };
+}
+
+/**
+ * Après un événement, seul le contenu est re-rendu : l'écran garde son état local
+ * (variable de module) et mount() rebranche les écouteurs sur le nouveau DOM.
+ */
+function refreshExtensionScreen(screen) {
+  const current = ++renderToken;
+  const content = renderExtensionScreen(screen);
+  if (current !== renderToken) return;
+  const main = view.querySelector('.content');
+  if (!main) {
+    renderApp();
+    return;
+  }
+  main.innerHTML = content;
+  mountExtensionScreen(screen);
+}
+
+function mountExtensionScreen(screen) {
+  if (typeof screen.mount !== 'function') return;
+  try {
+    screen.mount(view.querySelector('.content'), extensionScreenContext(screen));
+  } catch (error) {
+    console.error(`Écran d’extension « ${screen.id} » (mount) :`, error);
+  }
+}
+
+/** Écouteurs déclaratifs : tout élément [data-ext-event="nom"] déclenche screen.on(nom, …). */
+function bindExtensionEvents() {
+  const handler = (event) => {
+    const trigger = event.target.closest('[data-ext-event]');
+    if (!trigger) return;
+    const route = currentRoute();
+    const screen = EXTENSION_SCREEN_MAP[route];
+    if (!screen || typeof screen.on !== 'function') return;
+    const name = trigger.dataset.extEvent;
+    try {
+      const result = screen.on(name, trigger, extensionScreenContext(screen), event);
+      if (result && typeof result.then === 'function') {
+        result.catch((error) => console.error(`Écran « ${screen.id} » (${name}) :`, error));
+      }
+    } catch (error) {
+      console.error(`Écran d’extension « ${screen.id} » (${name}) :`, error);
+    }
+  };
+  for (const type of ['click', 'submit', 'change']) {
+    document.addEventListener(type, handler, true);
   }
 }
 
@@ -560,6 +616,7 @@ function renderApp() {
   }
   if (current !== renderToken) return;
   view.innerHTML = shell(screen, content);
+  if (EXTENSION_SCREEN_MAP[route]) mountExtensionScreen(EXTENSION_SCREEN_MAP[route]);
   document.body.classList.toggle('nav-open', state.navOpen);
   document.title = `${screen.title} · ${APP.app.name}`;
 }
@@ -696,6 +753,7 @@ window.addEventListener('unhandledrejection', (event) => {
 });
 
 async function boot() {
+  bindExtensionEvents();
   try {
     await store.init();
   } catch (error) {
