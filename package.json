@@ -1,0 +1,15 @@
+{
+  "name": "appmaker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Studio IA qui assemble des applications métier à partir de blocs réutilisables",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "smoke": "node scripts/smoke.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

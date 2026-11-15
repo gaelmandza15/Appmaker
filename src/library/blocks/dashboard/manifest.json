@@ -1,0 +1,9 @@
+{
+  "id": "dashboard",
+  "name": "Tableau de bord",
+  "description": "Vue d’ensemble avec indicateurs calculés en direct, répartition par catégorie et activité récente.",
+  "icon": "dashboard",
+  "renderer": "renderDashboard",
+  "whenToUse": "Presque toujours. C’est l’écran d’accueil : 3 à 4 indicateurs, une répartition et une liste récente.",
+  "aiHint": "Les KPI se calculent à partir des données: count, sum ou avg, avec un filtre optionnel."
+}

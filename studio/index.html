@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#F6F4EF">
+  <meta name="description" content="AppMaker — studio IA de génération d’applications métier à partir de blocs réutilisables.">
+  <title>AppMaker · Studio d’applications</title>
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+  <link rel="stylesheet" href="./studio.css">
+</head>
+<body>
+  <header class="site-header" id="site-header">
+    <div class="header-inner">
+      <a class="brand" href="#/" id="brand-link" aria-label="AppMaker, retour au studio">
+        <span class="brand-mark"><span data-icon="sparkles" data-size="16"></span></span>
+        <span class="brand-name">AppMaker</span>
+        <span class="brand-tag">STUDIO</span>
+      </a>
+
+      <nav class="site-nav" aria-label="Navigation principale">
+        <button class="nav-link is-active" id="nav-studio" type="button">Studio</button>
+        <button class="nav-link" id="nav-library" type="button">Bibliothèque</button>
+        <button class="nav-link" id="nav-apps" type="button">Applications</button>
+      </nav>
+
+      <div class="header-actions">
+        <div class="api-status is-pending" id="api-status" title="État de la génération">
+          <span class="api-dot"></span>
+          <span class="api-text" id="api-status-text">Connexion…</span>
+        </div>
+        <button class="header-cta" id="new-app-btn" type="button" aria-label="Nouvelle application">
+          <span data-icon="plus" data-size="13"></span>
+          <span>Nouvelle app</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="studio-main" id="studio-main">
+    <section class="composer-view" id="composer-view">
+      <section class="hero" id="studio">
+        <div class="hero-gradient" aria-hidden="true"></div>
+        <div class="hero-fade" aria-hidden="true"></div>
+
+        <div class="hero-mock hero-mock-left" aria-hidden="true">
+          <div class="mock-window">
+            <div class="mock-bar">
+              <span class="mock-dots"><i></i><i></i><i></i></span>
+              <span class="mock-title">StockFlow</span>
+              <span class="mock-live">Live</span>
+            </div>
+            <div class="mock-body">
+              <div class="mock-side">
+                <span class="mock-logo"></span>
+                <i class="is-active"></i><i></i><i></i><i></i>
+              </div>
+              <div class="mock-main">
+                <div class="mock-kpis">
+                  <span class="mock-kpi"><i></i><b>128</b></span>
+                  <span class="mock-kpi mock-kpi-alt"><i></i><b>24,8 k</b></span>
+                </div>
+                <div class="mock-chart">
+                  <span style="height:34%"></span><span style="height:52%"></span><span style="height:42%"></span>
+                  <span style="height:76%"></span><span style="height:64%"></span><span style="height:92%"></span>
+                </div>
+                <div class="mock-lines"><i></i><i></i><i></i></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero-mock hero-mock-right" aria-hidden="true">
+          <div class="mock-window mock-window-dark">
+            <div class="mock-bar">
+              <span class="mock-dots"><i></i><i></i><i></i></span>
+              <span class="mock-title">app.js</span>
+              <span class="mock-live mock-live-soft">local</span>
+            </div>
+            <div class="mock-code">
+              <span><em>const</em> app = <b>createApp</b>({</span>
+              <span class="indent">name: <u>"Atelier"</u>,</span>
+              <span class="indent">blocks: [<u>"dashboard"</u>,</span>
+              <span class="indent-2"><u>"crud"</u>],</span>
+              <span class="indent">data: <u>"sqlite"</u></span>
+              <span>});</span>
+              <span class="muted">// prêt à générer</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero-inner">
+          <h1>Décrivez votre<br>application métier.</h1>
+          <p class="hero-sub">
+            Une phrase suffit. L’IA structure vos données, choisit les bons écrans et assemble
+            une application prête à utiliser — sans repartir de zéro.
+          </p>
+
+          <div class="composer" id="composer-shell">
+            <label class="sr-only" for="prompt-input">Décrivez l’application souhaitée</label>
+            <textarea id="prompt-input" rows="3" maxlength="2000" spellcheck="true"
+              placeholder="Demandez à AppMaker de créer une application de gestion de stock…"></textarea>
+            <div class="composer-bar">
+              <div class="composer-info">
+                <span class="model-pill" id="model-pill"><span class="model-dot"></span> DeepSeek</span>
+                <span class="composer-meta">Dashboard + CRUD <span>·</span> HTML · CSS · JS</span>
+              </div>
+              <button class="generate-btn" id="generate-btn" type="button">
+                <span>Générer</span>
+                <span data-icon="arrow-up-right" data-size="14"></span>
+              </button>
+            </div>
+          </div>
+
+          <div class="examples-row">
+            <span class="examples-label">Idées</span>
+            <button class="example-chip" type="button" data-example="Je gère un atelier et je veux une application de gestion de stock : produits, fournisseurs, mouvements d’entrée et de sortie, alertes de stock bas et valeur du stock.">Gestion de stock</button>
+            <button class="example-chip" type="button" data-example="Je veux un CRM simple pour suivre mes clients, mes contacts, mes opportunités commerciales, mes relances et mon chiffre d’affaires.">CRM commercial</button>
+            <button class="example-chip" type="button" data-example="Application de suivi de chantiers pour une entreprise du bâtiment : clients, chantiers, interventions, statuts, budgets et comptes rendus.">Suivi de chantiers</button>
+            <button class="example-chip" type="button" data-example="Gestion de facturation pour une petite entreprise : clients, factures, statuts, relances et tableau de bord des encaissements.">Facturation</button>
+          </div>
+
+          <p class="hero-note">Généré et servi en local · prévisualisation immédiate · export ZIP</p>
+        </div>
+      </section>
+
+      <section class="content-section" id="library-section">
+        <div class="section-head">
+          <div class="section-title-wrap">
+            <div class="section-kicker"><span>Bibliothèque</span><span class="count-pill" id="library-count">—</span></div>
+            <h2>Une seule base.<br>Toutes vos applications.</h2>
+          </div>
+          <p class="section-lead">
+            L’IA ne réécrit pas chaque application de zéro. Elle compose avec un socle et des blocs
+            réutilisables, ce qui garantit une interface cohérente et des itérations rapides.
+          </p>
+        </div>
+        <div class="library-grid" id="library-list">
+          <div class="side-empty">Chargement de la bibliothèque…</div>
+        </div>
+      </section>
+
+      <section class="content-section recent-section" id="applications-section">
+        <div class="section-head">
+          <div class="section-title-wrap">
+            <div class="section-kicker"><span>Applications</span><span class="count-pill" id="recent-count"></span></div>
+            <h2>Reprenez là où<br>vous en étiez.</h2>
+          </div>
+          <p class="section-lead">
+            Chaque génération conserve son plan, ses données d’exemple et son code. Ouvrez un projet,
+            ajustez-le avec l’IA ou téléchargez-le pour continuer ailleurs.
+          </p>
+        </div>
+        <div class="recent-grid" id="recent-apps">
+          <div class="side-empty">Chargement des applications…</div>
+        </div>
+      </section>
+
+      <footer class="site-footer">
+        <div class="footer-brand">
+          <span class="footer-mark"><span data-icon="sparkles" data-size="13"></span></span>
+          <span>AppMaker</span>
+          <span class="footer-version">prototype v0.1</span>
+        </div>
+        <p>Généré avec DeepSeek et la bibliothèque AppMaker · données locales</p>
+      </footer>
+    </section>
+
+    <section class="center-view hidden" id="generating-view">
+      <div class="center-glow" aria-hidden="true"></div>
+      <div class="center-shell">
+        <div class="gen-panel">
+          <div class="gen-header">
+            <div class="gen-orb">
+              <span class="gen-orb-ring"></span>
+              <span data-icon="sparkles" data-size="22"></span>
+            </div>
+            <div class="gen-header-copy">
+              <div class="gen-kicker">Génération en cours</div>
+              <h2>Votre application prend forme.</h2>
+              <p class="gen-prompt" id="gen-prompt"></p>
+            </div>
+          </div>
+
+          <div class="gen-steps" id="gen-steps">
+            <div class="gen-step" data-stage="1">
+              <span class="gen-marker"></span>
+              <div class="gen-step-copy">
+                <strong>Analyse du besoin</strong>
+                <small>Lecture de la description et cadrage du métier.</small>
+              </div>
+              <span class="gen-state">En attente</span>
+            </div>
+            <div class="gen-step" data-stage="2">
+              <span class="gen-marker"></span>
+              <div class="gen-step-copy">
+                <strong>Modélisation des données</strong>
+                <small>Entités, champs, relations et données d’exemple.</small>
+              </div>
+              <span class="gen-state">En attente</span>
+            </div>
+            <div class="gen-step" data-stage="3">
+              <span class="gen-marker"></span>
+              <div class="gen-step-copy">
+                <strong>Composition des écrans</strong>
+                <small>Sélection des blocs, KPI, tableaux et formulaires.</small>
+              </div>
+              <span class="gen-state">En attente</span>
+            </div>
+            <div class="gen-step" data-stage="4">
+              <span class="gen-marker"></span>
+              <div class="gen-step-copy">
+                <strong>Assemblage du projet</strong>
+                <small>Injection des blocs et vérification des fichiers.</small>
+              </div>
+              <span class="gen-state">En attente</span>
+            </div>
+          </div>
+
+          <div class="gen-footer">
+            <span id="gen-elapsed">0 s</span>
+            <span class="gen-dot-sep"></span>
+            <span id="gen-model">DeepSeek · planification + assemblage local</span>
+          </div>
+        </div>
+        <p class="gen-note">Le plan est généré par DeepSeek, puis assemblé localement par la bibliothèque AppMaker.</p>
+      </div>
+    </section>
+
+    <section class="center-view hidden" id="error-view">
+      <div class="center-glow is-error" aria-hidden="true"></div>
+      <div class="center-shell">
+        <div class="error-panel">
+          <div class="error-icon"><span data-icon="alert" data-size="22"></span></div>
+          <div class="gen-kicker is-error">Échec de la génération</div>
+          <h2>L’application n’a pas pu être générée.</h2>
+          <p class="error-message" id="error-message"></p>
+          <div class="error-actions">
+            <button class="btn-primary" id="retry-btn" type="button">Réessayer</button>
+            <button class="btn-secondary" id="demo-btn" type="button">Générer la démo StockFlow</button>
+            <button class="btn-ghost" id="error-back" type="button">Modifier la description</button>
+          </div>
+          <p class="error-hint">
+            Le mode démo n’appelle pas DeepSeek. Pour la génération IA, vérifiez la clé
+            <code>DEEPSEEK_API_KEY</code> dans le fichier <code>.env</code>.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="result-view hidden" id="result-view">
+      <header class="result-head">
+        <button class="icon-square" id="back-btn" type="button" aria-label="Retour">
+          <span data-icon="arrow-left" data-size="17"></span>
+        </button>
+        <div class="result-heading">
+          <div class="result-name-row">
+            <h1 id="result-name"></h1>
+            <span class="app-badge">Généré</span>
+          </div>
+          <div class="result-sub">
+            <span id="result-meta"></span>
+            <span class="meta-dot"></span>
+            <span class="result-prompt" id="result-prompt"></span>
+          </div>
+        </div>
+        <div class="result-actions">
+          <a class="btn-secondary btn-ghost-link" id="open-app" href="#" target="_blank" rel="noopener" title="Ouvrir l’aperçu dans un nouvel onglet">
+            <span data-icon="external-link" data-size="14"></span>
+            <span>Aperçu</span>
+          </a>
+          <a class="btn-secondary btn-zip" id="download-btn" href="#" download title="Télécharger le projet (code source, pour les développeurs)">
+            <span data-icon="folder" data-size="14"></span>
+            <span>Code</span>
+          </a>
+          <button class="btn-primary btn-exe" id="install-btn" type="button">
+            <span data-icon="monitor-down" data-size="14"></span>
+            <span id="install-label">Installer sur Windows</span>
+          </button>
+        </div>
+      </header>
+
+      <div class="build-strip hidden" id="build-strip" aria-live="polite">
+        <div class="build-strip-main">
+          <span class="build-dot"></span>
+          <span class="build-text" id="build-text"></span>
+        </div>
+        <div class="build-steps" id="build-steps"></div>
+        <div class="build-strip-actions">
+          <button class="build-link" type="button" id="build-log-toggle">Journal</button>
+          <a class="build-link is-hidden" id="build-artifact" href="#" download>Installer .exe</a>
+          <a class="build-link is-hidden" id="build-exe" href="#" download>Version portable</a>
+          <a class="build-link is-hidden" id="build-bundle" href="#" download>Sources du build</a>
+        </div>
+      </div>
+      <pre class="build-log hidden" id="build-log" aria-label="Journal de compilation"></pre>
+
+      <div class="result-body">
+        <aside class="inspector">
+          <div class="inspector-head">
+            <div class="tabs" role="tablist" aria-label="Détails de l’application">
+              <button class="tab-btn active" type="button" data-tab="plan" role="tab" aria-selected="true">Plan</button>
+              <button class="tab-btn" type="button" data-tab="files" role="tab" aria-selected="false">Fichiers</button>
+            </div>
+            <span class="inspector-hint" id="inspector-hint"></span>
+          </div>
+
+          <div class="inspector-content" id="inspector-content"></div>
+
+          <form class="refine-form" id="refine-form">
+            <div class="refine-label">
+              <span data-icon="sparkles" data-size="13"></span>
+              Agent AppMaker
+              <span class="refine-new">ajoute une extension</span>
+            </div>
+            <div class="refine-field">
+              <label class="sr-only" for="refine-input">Demande à confier à l’agent</label>
+              <textarea id="refine-input" rows="2" maxlength="1500" placeholder="Ex. Ajoute un export CSV sur les produits et un KPI de valeur totale du stock…"></textarea>
+              <button class="refine-send" id="refine-btn" type="submit" aria-label="Confier la modification à l’agent">
+                <span data-icon="arrow-up" data-size="15"></span>
+              </button>
+            </div>
+            <p class="refine-hint">L’agent ajoute des modules d’extension, vérifie l’aperçu et n’écrit jamais le socle.</p>
+            <pre class="agent-log hidden" id="agent-log" aria-live="polite"></pre>
+          </form>
+
+          <div class="result-loading hidden" id="result-loading">
+            <span class="spinner"></span>
+            <span>Mise à jour de l’application…</span>
+          </div>
+        </aside>
+
+        <section class="preview-panel" aria-label="Aperçu de l’application">
+          <div class="preview-toolbar">
+            <div class="browser-dots" aria-hidden="true"><span></span><span></span><span></span></div>
+            <div class="preview-url" id="preview-url">
+              <span data-icon="lock" data-size="10"></span>
+              <span class="preview-url-text">appmaker.local</span>
+            </div>
+            <div class="device-switch" role="group" aria-label="Taille de l’aperçu">
+              <button class="device-btn active" type="button" data-device="desktop" title="Bureau" aria-label="Aperçu bureau">
+                <span data-icon="monitor" data-size="13"></span>
+              </button>
+              <button class="device-btn" type="button" data-device="tablet" title="Tablette" aria-label="Aperçu tablette">
+                <span data-icon="tablet" data-size="13"></span>
+              </button>
+              <button class="device-btn" type="button" data-device="mobile" title="Mobile" aria-label="Aperçu mobile">
+                <span data-icon="smartphone" data-size="13"></span>
+              </button>
+            </div>
+            <button class="icon-ghost" id="focus-preview" type="button" title="Agrandir l’aperçu" aria-label="Agrandir l’aperçu" aria-pressed="false">
+              <span data-icon="maximize" data-size="13"></span>
+            </button>
+            <button class="icon-ghost" id="reload-preview" type="button" title="Recharger l’aperçu" aria-label="Recharger l’aperçu">
+              <span data-icon="refresh" data-size="13"></span>
+            </button>
+          </div>
+          <div class="preview-stage" id="preview-stage">
+            <iframe id="preview-frame" title="Aperçu de l’application générée" src="about:blank"></iframe>
+          </div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <div class="toast-stack" id="toast-root" aria-live="polite"></div>
+  <script type="module" src="./studio.js"></script>
+</body>
+</html>

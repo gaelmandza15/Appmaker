@@ -1,0 +1,10 @@
+node_modules/
+.env
+generated/
+data/
+*.log
+.DS_Store
+
+# Crate hôte : artefacts générés par Tauri
+src/host/gen/
+src/host/target/

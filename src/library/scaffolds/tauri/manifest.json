@@ -1,0 +1,7 @@
+{
+  "id": "tauri",
+  "name": "Desktop Tauri 2",
+  "description": "Enveloppe Tauri 2 + SQLite : la même application, installable sur un PC Windows via un installateur signé.",
+  "status": "ready",
+  "buildCommand": "npx --yes @tauri-apps/cli@{{TAURI_CLI_VERSION}} build --target x86_64-pc-windows-msvc --no-bundle"
+}

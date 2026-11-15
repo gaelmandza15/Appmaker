@@ -1,0 +1,6 @@
+{
+  "id": "web",
+  "name": "Web app autonome",
+  "description": "Scaffold HTML/CSS/JS sans dépendance, données persistées localement. Base prête pour un adaptateur Tauri + SQLite.",
+  "status": "ready"
+}

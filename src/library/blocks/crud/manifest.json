@@ -1,0 +1,9 @@
+{
+  "id": "crud",
+  "name": "Table de gestion",
+  "description": "Liste de données avec recherche, tri, formulaire d’ajout/modification et suppression confirmée.",
+  "icon": "list",
+  "renderer": "renderCrud",
+  "whenToUse": "Un écran par entité manipulable par l’utilisateur (produits, clients, interventions…).",
+  "aiHint": "Le bloc expose une entité, son libellé et son icône. La table et le formulaire sont générés depuis les champs de l’entité."
+}
